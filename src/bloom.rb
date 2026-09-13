@@ -1,8 +1,13 @@
 # frozen_string_literal: true
 
 ################### Switch to false when testing other stuff, because this takes some time to run
-run_img_cmds = true
+run_img_cmds = false
 ###################
+
+require 'json'
+require_relative 'pbs'
+require_relative 'rxdata'
+require_relative 'atlas'
 
 usage_message = "Run with arguments: <path to the game repo> <output path (a 'BloomArtifacts' folder will be made here. No argument assumes the current directory)>"
 abort(usage_message) if ARGV.empty?
@@ -16,20 +21,16 @@ output_directory_path = ARGV[1].nil? || ARGV[1].empty? ? './BloomArtifacts' : "#
 build_dir = './build'
 `mkdir -p #{build_dir}`
 
-metadata_hash = {}
+atlas_metadata_hash = {}
 
 ### Process pbs files
-require_relative 'pbs'
+pbs_data = build_pbs("#{repo_path}/PBS/")
+# puts pbs_data.to_json
 
 ### Process rxdata files
-require_relative 'rxdata'
 marshal_data = marshal_all(rxdata_path)
 
-# p marshal_data[1]
-
 ### Build Sprite atlases
-require_relative 'atlas'
-
 if run_img_cmds
   sprite_atlas_build_data = { # Anything with {---} will be replaced by the appropriate value
     icon: {
@@ -88,5 +89,13 @@ if run_img_cmds
 
   # Build the sprite atlas
   sprite_atlas_output = "#{output_directory_path}/sprite_atlas.png"
-  metadata_hash[:sprite_atlas] = build_atlas(sprite_atlas_output, build_dir, sprite_atlas_build_data)
+  atlas_metadata_hash[:sprite_atlas] = build_atlas(sprite_atlas_output, build_dir, sprite_atlas_build_data)
 end
+
+### Finalize the JSON output
+json = {
+  PBS: pbs_data,
+  RxData: marshal_data,
+  Atlas: atlas_metadata_hash
+}
+File.write("#{output_directory_path}/data.json", JSON.generate(json))
