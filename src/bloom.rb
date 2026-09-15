@@ -24,8 +24,7 @@ build_dir = './build'
 atlas_metadata_hash = {}
 
 ### Process pbs files
-pbs_data = build_pbs("#{repo_path}/PBS/")
-# puts pbs_data.to_json
+pbs_data = Pbs.build_pbs("#{repo_path}/PBS/")
 
 ### Process rxdata files
 marshal_data = marshal_all(rxdata_path)
