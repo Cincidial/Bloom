@@ -3,6 +3,8 @@
 # Module for handling pbs data
 module Pbs
   def self.build_pbs(pbs_path)
+    stats_keys = %w[HP Atk Def Spe SpAtk SpDef]
+
     result = {}
     result[:Abilities] = parse_multi_line_objects(["#{pbs_path}abilities.txt", "#{pbs_path}abilities_new.txt"])
     result[:AbilitiesPrimeval] = parse_multi_line_objects(["#{pbs_path}abilities_primeval.txt"])
@@ -17,9 +19,32 @@ module Pbs
     result[:MovesPrimeval] = parse_multi_line_objects(["#{pbs_path}moves_primeval.txt"])
     result[:Tribes] = parse_single_line_objects(["#{pbs_path}tribes.txt"], %w[Key Count Name Description])
     result[:Types] = parse_multi_line_objects(["#{pbs_path}types.txt"])
-    pokemon = result[:Pokemon] = parse_multi_line_objects(["#{pbs_path}pokemon.txt"])
+    pokemon = result[:Pokemon] = parse_multi_line_objects(["#{pbs_path}pokemon.txt"]) do |mon|
+      mon['BaseStats'] = mon['BaseStats'].map.with_index { |x, i| [stats_keys[i], x] }.to_h
+      parse_and_set_multi_obj_comma_list(mon, 'Moves', %w[Lvl ID])
+      parse_and_set_multi_obj_comma_list(mon, 'Evolutions', %w[Pokemon Method Value])
+
+      if mon.key?('Moves')
+        upon_evo_moves = mon['Moves'].select { |x| x['Lvl'].zero? }
+        mon['Moves'] = mon['Moves'].select { |x| x['Lvl'].positive? }
+        mon['UponEvoMoves'] = upon_evo_moves.map { |x| x['ID'] }
+      end
+    end
     result[:PokemonForms] = parse_multi_line_objects(["#{pbs_path}pokemonforms.txt"], %w[ID Form])
-    trainers = result[:Trainers] = parse_multi_line_objects(["#{pbs_path}trainers.txt"], %w[Type Name Version], %w[Pokemon ID Level])
+    trainers = result[:Trainers] = parse_multi_line_objects(["#{pbs_path}trainers.txt"], %w[Type Name Version], %w[Pokemon ID Level]) do |trainer|
+      next unless trainer['Pokemon']
+
+      trainer['Pokemon'].each do |mon|
+        if mon.key?('AbilityIndex')
+          mon['Ability'] = pokemon[mon['ID']]['Abilities'][mon['AbilityIndex']]
+          mon.delete('AbilityIndex')
+        else
+          mon['Ability'] = pokemon[mon['ID']]['Abilities'][0]
+        end
+
+        mon['EV'] = mon['EV'].map.with_index { |x, i| [stats_keys[i], x] }.to_h if mon.key?('EV')
+      end
+    end
     result[:TrainersTypes] = parse_multi_line_objects(["#{pbs_path}trainertypes.txt"])
     encounters = result[:Encounters] = parse_encounters_file("#{pbs_path}encounters.txt")
 
@@ -31,7 +56,6 @@ module Pbs
     # TODO: Add post processing for moves (later evolutions take the priors list if they don't have anything beyond a level 0 evolution move?) (will add quite a lot of file size, but probaly worth it)
     #   And line moves for TMs?
     # TODO: Add post processing for tribes
-    # TODO: Add post processing to trainers to replace ability index with its key
     # TODO: Post processing to add the name of the location to the encounters list using the rxdata
 
     result
@@ -56,6 +80,8 @@ module Pbs
         line = line.sub(/#.*/, '').rstrip
         if line.start_with?('[')
           if obj.key?(:Key)
+            yield(obj) if block_given?
+
             results[obj[:Key]] = obj
             obj.delete(:Key)
             obj = {}
@@ -86,6 +112,8 @@ module Pbs
           obj_to_add_to[k] = v
         end
       end
+
+      yield(obj) if block_given?
 
       results[obj[:Key]] = obj
       obj.delete(:Key)
@@ -154,6 +182,24 @@ module Pbs
     obj
   end
 
+  private_class_method def self.parse_and_set_multi_obj_comma_list(obj, key, split_keys)
+    return unless obj.key?(key)
+
+    arr = obj[key]
+    obj_based = []
+    i = 0
+    while i < arr.length
+      sub_obj = {}
+      split_keys.each_with_index do |sk, ski|
+        sub_obj[sk] = arr[i + ski]
+      end
+      obj_based.append(sub_obj)
+      i += split_keys.length
+    end
+
+    obj[key] = obj_based
+  end
+
   private_class_method def self.parse_kv(str)
     split = str.split('=')
     id = split[0].strip
@@ -181,32 +227,17 @@ module Pbs
   end
 
   private_class_method def self.post_process_evolutions(pokemon)
-    evolutions_key = 'Evolutions'
-
-    # Convert evolutions to an object based array
-    pokemon.each_key do |mon|
-      next unless pokemon[mon][evolutions_key]
-
-      evolutions = pokemon[mon][evolutions_key]
-      obj_based_evos = []
-      i = 0
-      while i < evolutions.length
-        obj_based_evos.append({ Pokemon: evolutions[0], Method: evolutions[1], Value: evolutions[2] })
-        i += 3
-      end
-
-      pokemon[mon][evolutions_key] = obj_based_evos
-    end
-
     # The final pokemon will have nothing to evolve into, so we can work backwards from there (ensures the list generates no matter the pokedex order)
-    # Only need to track the prevo on every mon, so that it can referenced and the tree built from there as needed client side
-
-    pokemon_with_evos = pokemon.select { |_, v| v.key?(evolutions_key) }
+    # Only need to track the prevo on every mon, so that it can referenced and the tree built from there as needed
+    pokemon_with_evos = pokemon.select { |_, v| v.key?('Evolutions') }
     pokemon.each_key do |mon|
-      prevo = pokemon_with_evos.reject { |_, v| v[evolutions_key].select { |x| x[:Pokemon] == mon }.empty? }.keys
+      prevo = pokemon_with_evos.reject { |_, v| v['Evolutions'].select { |x| x[:Pokemon] == mon }.empty? }.keys
       next if prevo.empty?
 
       pokemon[mon][:Prevo] = prevo
     end
+  end
+
+  private_class_method def self.post_process_moves_tribes(pokemon)
   end
 end
