@@ -31,7 +31,7 @@ module Pbs
       end
     end
     result[:PokemonForms] = parse_multi_line_objects(["#{pbs_path}pokemonforms.txt"], %w[ID Form])
-    trainers = result[:Trainers] = parse_multi_line_objects(["#{pbs_path}trainers.txt"], %w[Type Name Version], %w[Pokemon ID Level]) do |trainer|
+    result[:Trainers] = parse_multi_line_objects(["#{pbs_path}trainers.txt"], %w[Type Name Version], %w[Pokemon ID Level]) do |trainer|
       next unless trainer['Pokemon']
 
       trainer['Pokemon'].each do |mon|
@@ -53,9 +53,6 @@ module Pbs
     # pp pokemon
 
     # TODO: Generate a schema to attach to each result
-    # TODO: Add post processing for moves (later evolutions take the priors list if they don't have anything beyond a level 0 evolution move?) (will add quite a lot of file size, but probaly worth it)
-    #   And line moves for TMs?
-    # TODO: Add post processing for tribes
     # TODO: Post processing to add the name of the location to the encounters list using the rxdata
 
     result
@@ -231,13 +228,29 @@ module Pbs
     # Only need to track the prevo on every mon, so that it can referenced and the tree built from there as needed
     pokemon_with_evos = pokemon.select { |_, v| v.key?('Evolutions') }
     pokemon.each_key do |mon|
-      prevo = pokemon_with_evos.reject { |_, v| v['Evolutions'].select { |x| x[:Pokemon] == mon }.empty? }.keys
+      prevo = pokemon_with_evos.select { |_, v| v['Evolutions'].count { |x| x['Pokemon'] == mon }.positive? }.keys
       next if prevo.empty?
 
-      pokemon[mon][:Prevo] = prevo
+      pokemon[mon][:Prevo] = prevo[0]
     end
-  end
 
-  private_class_method def self.post_process_moves_tribes(pokemon)
+    copy_closest_valid_prevo = lambda { |key|
+      pokemon.each_value do |v|
+        v[key] ||= []
+        next unless v[key].empty?
+
+        prevo = pokemon[v[:Prevo]]
+        while prevo
+          if prevo[key]
+            v[key] = prevo[key]
+            break
+          end
+          prevo = pokemon[prevo[:Prevo]]
+        end
+      end
+    }
+    copy_closest_valid_prevo.call('Moves')
+    copy_closest_valid_prevo.call('LineMoves')
+    copy_closest_valid_prevo.call('Tribes')
   end
 end
