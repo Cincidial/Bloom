@@ -23,11 +23,12 @@ build_dir = './build'
 
 atlas_metadata_hash = {}
 
-### Process pbs files
-pbs_data = Pbs.build_pbs("#{repo_path}/PBS/")
-
 ### Process rxdata files
-marshal_data = marshal_all(rxdata_path)
+marshal_data = RxData.marshal_all(rxdata_path)
+# pp marshal_data
+
+### Process pbs files
+pbs_data = Pbs.build_pbs("#{repo_path}/PBS/", marshal_data)
 
 ### Build Sprite atlases
 if run_img_cmds

@@ -2,7 +2,7 @@
 
 # Module for handling pbs data
 module Pbs
-  def self.build_pbs(pbs_path)
+  def self.build_pbs(pbs_path, marshal_data)
     stats_keys = %w[HP Atk Def Spe SpAtk SpDef]
 
     result = {}
@@ -50,11 +50,11 @@ module Pbs
 
     # Post Processing
     post_process_evolutions(pokemon)
-    # pp pokemon
+    encounters.each do |k, v|
+      v[:Name] = marshal_data[k.to_i][:Name]
+    end
 
     # TODO: Generate a schema to attach to each result
-    # TODO: Post processing to add the name of the location to the encounters list using the rxdata
-
     result
   end
 
