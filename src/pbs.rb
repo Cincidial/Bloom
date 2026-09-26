@@ -18,8 +18,9 @@ module Pbs
       item[:IsSuper] = true if path.include?('super')
       item.merge!(repo_data[:BagSlots][item['Pocket']]) if item.key?('Pocket')
     end
-    result[:Moves] = parse_multi_line_objects(["#{pbs_path}moves.txt", "#{pbs_path}moves_new.txt"])
-    result[:MovesPrimeval] = parse_multi_line_objects(["#{pbs_path}moves_primeval.txt"])
+    result[:Moves] = parse_multi_line_objects(["#{pbs_path}moves.txt", "#{pbs_path}moves_new.txt", "#{pbs_path}moves_primeval.txt"]) do |move, path|
+      move[:IsPrimeval] = true if path.include?('primeval')
+    end
     result[:Tribes] = parse_single_line_objects(["#{pbs_path}tribes.txt"], %w[Key Count Name Description])
     result[:Types] = parse_multi_line_objects(["#{pbs_path}types.txt"])
     pokemon = result[:Pokemon] = parse_multi_line_objects(["#{pbs_path}pokemon.txt"]) do |mon|
@@ -57,7 +58,6 @@ module Pbs
       v[:Name] = marshal_data[:Maps][k.to_i][:Name]
     end
 
-    # TODO: Generate a schema to attach to each result
     result
   end
 
