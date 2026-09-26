@@ -2,19 +2,22 @@
 
 # Module for handling pbs data
 module Pbs
-  def self.build_pbs(pbs_path, marshal_data)
+  def self.build_pbs(pbs_path, marshal_data, repo_data)
     stats_keys = %w[HP Atk Def Spe SpAtk SpDef]
 
     result = {}
-    result[:Abilities] = parse_multi_line_objects(["#{pbs_path}abilities.txt", "#{pbs_path}abilities_new.txt"])
-    result[:AbilitiesPrimeval] = parse_multi_line_objects(["#{pbs_path}abilities_primeval.txt"])
+    result[:Abilities] = parse_multi_line_objects(["#{pbs_path}abilities.txt", "#{pbs_path}abilities_new.txt", "#{pbs_path}abilities_primeval.txt"]) do |ability, path|
+      ability[:IsPrimeval] = true if path.include?('primeval')
+    end
     result[:Achievements] = parse_multi_line_objects(["#{pbs_path}achievements.txt"])
     result[:Avatars] = parse_multi_line_objects(["#{pbs_path}avatars.txt"], %w[ID Version])
     result[:Dislikes] = parse_single_line_objects(["#{pbs_path}dislikes.txt"], %w[Key Description])
     result[:Likes] = parse_single_line_objects(["#{pbs_path}dislikes.txt"], %w[Key Description])
     result[:Traits] = parse_single_line_objects(["#{pbs_path}traits.txt"], %w[Key Description])
-    result[:Items] = parse_multi_line_objects(["#{pbs_path}items.txt", "#{pbs_path}items_machine.txt"])
-    result[:ItemsSuper] = parse_multi_line_objects(["#{pbs_path}items_super.txt"])
+    result[:Items] = parse_multi_line_objects(["#{pbs_path}items.txt", "#{pbs_path}items_machine.txt", "#{pbs_path}items_super.txt"]) do |item, path|
+      item[:IsSuper] = true if path.include?('super')
+      item.merge!(repo_data[:BagSlots][item['Pocket']]) if item.key?('Pocket')
+    end
     result[:Moves] = parse_multi_line_objects(["#{pbs_path}moves.txt", "#{pbs_path}moves_new.txt"])
     result[:MovesPrimeval] = parse_multi_line_objects(["#{pbs_path}moves_primeval.txt"])
     result[:Tribes] = parse_single_line_objects(["#{pbs_path}tribes.txt"], %w[Key Count Name Description])
@@ -77,7 +80,7 @@ module Pbs
         line = line.sub(/#.*/, '').rstrip
         if line.start_with?('[')
           if obj.key?(:Key)
-            yield(obj) if block_given?
+            yield(obj, path) if block_given?
 
             results[obj[:Key]] = obj
             obj.delete(:Key)
@@ -110,7 +113,7 @@ module Pbs
         end
       end
 
-      yield(obj) if block_given?
+      yield(obj, path) if block_given?
 
       results[obj[:Key]] = obj
       obj.delete(:Key)

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 source 'https://rubygems.org'
-ruby '4.0.6'
+ruby '4.0.7'
 
 gem 'eidolon', '~> 0.2.1'
 gem 'rubocop', require: false

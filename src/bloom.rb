@@ -5,6 +5,7 @@ run_img_cmds = false
 ###################
 
 require 'json'
+require_relative 'repo'
 require_relative 'pbs'
 require_relative 'rxdata'
 require_relative 'atlas'
@@ -21,16 +22,18 @@ output_directory_path = ARGV[1].nil? || ARGV[1].empty? ? './BloomArtifacts' : "#
 build_dir = './build'
 `mkdir -p #{build_dir}`
 
-atlas_metadata_hash = {}
+### Process hardcoded repo data
+repo_data = Repo.build_repo
 
 ### Process rxdata files
 marshal_data = RxData.marshal_all(rxdata_path)
 # pp marshal_data
 
 ### Process pbs files
-pbs_data = Pbs.build_pbs("#{repo_path}/PBS/", marshal_data)
+pbs_data = Pbs.build_pbs("#{repo_path}/PBS/", marshal_data, repo_data)
 
 ### Build Sprite atlases
+atlas_metadata_hash = {}
 if run_img_cmds
   sprite_atlas_build_data = { # Anything with {---} will be replaced by the appropriate value
     icon: {
