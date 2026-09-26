@@ -5,6 +5,7 @@ run_img_cmds = false
 ###################
 
 require 'json'
+require_relative 'schema'
 require_relative 'repo'
 require_relative 'pbs'
 require_relative 'rxdata'
@@ -101,4 +102,5 @@ json = {
   RxData: marshal_data,
   Atlas: atlas_metadata_hash
 }
+json[:Schema] = Schema.build_schema(json)
 File.write("#{output_directory_path}/data.json", JSON.generate(json))

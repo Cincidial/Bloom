@@ -54,7 +54,7 @@ module Pbs
     # Post Processing
     post_process_evolutions(pokemon)
     encounters.each do |k, v|
-      v[:Name] = marshal_data[k.to_i][:Name]
+      v[:Name] = marshal_data[:Maps][k.to_i][:Name]
     end
 
     # TODO: Generate a schema to attach to each result

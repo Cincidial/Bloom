@@ -24,7 +24,7 @@ module RxData
     maps.each do |k, v|
       v.merge!(map_info[k])
     end
-    maps
+    { Maps: maps }
   end
 
   private_class_method def self.parse_mapinfos(data)
