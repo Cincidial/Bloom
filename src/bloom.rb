@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 ################### Switch to false when testing other stuff, because this takes some time to run
-run_img_cmds = false
+run_img_cmds = true
 ###################
 
 require 'json'
@@ -37,40 +37,52 @@ pbs_data = Pbs.build_pbs("#{repo_path}/PBS/", marshal_data, repo_data)
 atlas_metadata_hash = {}
 if run_img_cmds
   sprite_atlas_build_data = { # Anything with {---} will be replaced by the appropriate value
-    icon: {
+    Icon: {
       repo_path: ['Graphics/Pokemon/Icons'],
       path: "#{build_dir}/icons",
       clean_cmd: ['-crop {w}x{h}+0+0 +repage'],
       w: 64,
       h: 64
     },
-    front: {
+    Front: {
       repo_path: ['Graphics/Pokemon/Front'],
       path: "#{build_dir}/fronts",
       clean_cmd: ['-resize {w}x{h} +repage'],
       w: 160,
       h: 160
     },
-    item: {
+    Item: {
       repo_path: ['Graphics/Items'],
       path: "#{build_dir}/items",
       clean_cmd: ['-resize {w}x{h} +repage'],
       w: 48,
       h: 48
     },
-    trainer: {
+    Trainer: {
       repo_path: ['Graphics/Trainers'],
       path: "#{build_dir}/trainers",
       clean_cmd: ['-resize {w}x{h} +repage'],
       w: 160,
       h: 160
     },
-    overworld: {
-      repo_path: ['Graphics/Characters', 'Graphics/Pokemon/Characters/Followers'],
+    Overworld: {
+      repo_path: ['Graphics/Characters', 'Graphics/Characters/Followers'],
       path: "#{build_dir}/overworld",
-      clean_cmd: ['-resize 256x256 -crop {w}x{h}+0+0 +repage'],
+      clean_cmd: ['-resize 256x256 -crop {w}x{h}+0+0 +repage', '-resize 256x256 -crop {w}x{h}+0+0 +repage'],
       w: 64,
       h: 256 # Take the first vertical column so that we can use the directional sprites
+    },
+    MoveCategory: {
+      path: "#{build_dir}/move_categories",
+      clean_cmd: ["cp -r ./global_imgs/move_categories/ #{build_dir}/"],
+      w: 59,
+      h: 39
+    },
+    Type: {
+      path: "#{build_dir}/types",
+      clean_cmd: ["mogrify -path #{build_dir}/types -format png -resize {w}x{h} -background none ./global_imgs/types/pokemon-type-icons-main/icons/*.svg"],
+      w: 128,
+      h: 128
     }
   }
 
@@ -79,9 +91,12 @@ if run_img_cmds
   sprite_atlas_build_data.each_value do |data|
     `mkdir -p #{data[:path]}`
     data[:clean_cmd].each_with_index do |cmd, i|
-      repo_sub_path = data[:repo_path][i]
+      full_cmd = cmd
+      if data.key?(:repo_path)
+        repo_sub_path = data[:repo_path][i]
+        full_cmd = "mogrify -path #{data[:path]} #{cmd} #{repo_path}/#{repo_sub_path}/*.png"
+      end
 
-      full_cmd = "mogrify -path #{data[:path]} #{cmd} #{repo_path}/#{repo_sub_path}/*.png"
       full_cmd = full_cmd.gsub('{w}', data[:w].to_s)
       full_cmd = full_cmd.gsub('{h}', data[:h].to_s)
       pids << fork do

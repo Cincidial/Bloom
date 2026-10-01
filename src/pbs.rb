@@ -172,12 +172,17 @@ module Pbs
     results
   end
 
+  # Split values beyond the keys length are assumed a string that included commas and was split, thus it's appended to the last key
   private_class_method def self.parse_single_line_obj(line, split_keys)
     split = line.split(',')
     obj = {}
 
     split.each_with_index do |x, i|
-      obj[split_keys[i]] = cast_value(x)
+      if i >= split_keys.length
+        obj[split_keys[split_keys.length - 1]] += ",#{x}" # Append the value without conversion as we have no idea what the split means anymore
+      else
+        obj[split_keys[i]] = cast_value(x)
+      end
     end
     obj
   end
