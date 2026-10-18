@@ -4,7 +4,7 @@
 def build_atlas(output_path, build_dir, data)
   magick_config = 'MAGICK_CONFIGURE_PATH="image_magick_config/"' # This is relative to the caller
 
-  atlas_meta_hash = { artifact: File.basename(output_path) }
+  atlas_meta_hash = { Artifact: File.basename(output_path) }
   atlas_rows = [[]]
   x = 0
   y = 0

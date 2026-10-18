@@ -108,7 +108,7 @@ if run_img_cmds
 
   # Build the sprite atlas
   sprite_atlas_output = "#{output_directory_path}/sprite_atlas.png"
-  atlas_metadata_hash[:sprite_atlas] = build_atlas(sprite_atlas_output, build_dir, sprite_atlas_build_data)
+  atlas_metadata_hash[:SpriteAtlas] = build_atlas(sprite_atlas_output, build_dir, sprite_atlas_build_data)
 end
 
 ### Finalize the JSON output
