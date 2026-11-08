@@ -117,5 +117,8 @@ json = {
   RxData: marshal_data,
   Atlas: atlas_metadata_hash
 }
+schema = Schema.build_schema(json)
+json[:PBS] = Pbs.transform_many_type_values_to_array(pbs_data, schema[:PBS])
 json[:Schema] = Schema.build_schema(json)
+
 File.write("#{output_directory_path}/data.json", JSON.generate(json))

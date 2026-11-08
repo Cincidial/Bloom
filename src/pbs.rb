@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative 'schema'
+
 # Module for handling pbs data
 module Pbs
   def self.build_pbs(pbs_path, marshal_data, repo_data)
@@ -59,6 +61,24 @@ module Pbs
     end
 
     result
+  end
+
+  # Transform any key that has both array and non-array values to always be arrays
+  def self.transform_many_type_values_to_array(data, pbs_schema)
+    data.each do |k1, v1|
+      schema = pbs_schema[k1]
+      v1.each_value do |v2|
+        v2.each do |k3, v3|
+          next unless schema[k3].is_a?(Array) && schema[k3].length > 1 # Only consider keys whose shema shows there can be multiple data types of the values
+          next unless schema[k3].any? { |x| x.is_a?(Array) } && schema[k3].any? { |x| !x.is_a?(Array) } # Only consider keys whose schema show at least one type of value is an array and other is not
+          next if v3.is_a?(Array) # Only process the values that are not arrays already
+
+          v2[k3] = [v3]
+        end
+      end
+    end
+
+    data
   end
 
   # Parses files that have a [object_key] and any number of k=v below them, including repeating sub objects
