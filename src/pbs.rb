@@ -23,7 +23,9 @@ module Pbs
     result[:Moves] = parse_multi_line_objects(["#{pbs_path}moves.txt", "#{pbs_path}moves_new.txt", "#{pbs_path}moves_primeval.txt"]) do |move, path|
       move[:IsPrimeval] = true if path.include?('primeval')
     end
-    result[:Tribes] = parse_single_line_objects(["#{pbs_path}tribes.txt"], %w[Key Count Name Description])
+    result[:Tribes] = parse_single_line_objects(["#{pbs_path}tribes.txt"], %w[Key Count Name Description]) do |tribe, _|
+      tribe['Description'] = tribe['Description'].gsub(/\A"|"\Z/, '')
+    end
     result[:Types] = parse_multi_line_objects(["#{pbs_path}types.txt"])
     pokemon = result[:Pokemon] = parse_multi_line_objects(["#{pbs_path}pokemon.txt"]) do |mon|
       mon['BaseStats'] = mon['BaseStats'].map.with_index { |x, i| [stats_keys[i], x] }.to_h
@@ -148,6 +150,8 @@ module Pbs
     paths.each do |path|
       File.foreach(path, mode: 'r:bom|utf-8', chomp: true) do |line|
         obj = parse_single_line_obj(line, split_keys)
+        yield(obj, path) if block_given?
+
         results[obj[split_keys[0]]] = obj
         obj.delete(split_keys[0])
       end
